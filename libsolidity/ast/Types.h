@@ -928,6 +928,7 @@ public:
 		ABIEncodePacked,
 		ABIEncodeWithSelector,
 		ABIEncodeWithSignature,
+		ABIDecode,
 		GasLeft ///< gasleft()
 	};
 
