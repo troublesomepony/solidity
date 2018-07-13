@@ -231,18 +231,18 @@ activate themselves.
         // Parameters of the auction. Times are either
         // absolute unix timestamps (seconds since 1970-01-01)
         // or time periods in seconds.
-        address public beneficiary;
-        uint public auctionEnd;
+        address public m_beneficiary;
+        uint public m_auctionEnd;
 
         // Current state of the auction.
-        address public highestBidder;
-        uint public highestBid;
+        address public m_highestBidder;
+        uint public m_highestBid;
 
         // Allowed withdrawals of previous bids
-        mapping(address => uint) pendingReturns;
+        mapping(address => uint) m_pendingReturns;
 
         // Set to true at the end, disallows any change
-        bool ended;
+        bool m_ended;
 
         // Events that will be fired on changes.
         event HighestBidIncreased(address bidder, uint amount);
@@ -260,8 +260,8 @@ activate themselves.
             uint _biddingTime,
             address _beneficiary
         ) public {
-            beneficiary = _beneficiary;
-            auctionEnd = now + _biddingTime;
+            m_beneficiary = _beneficiary;
+            m_auctionEnd = now + _biddingTime;
         }
 
         /// Bid on the auction with the value sent
@@ -278,42 +278,42 @@ activate themselves.
             // Revert the call if the bidding
             // period is over.
             require(
-                now <= auctionEnd,
+                now <= m_auctionEnd,
                 "Auction already ended."
             );
 
             // If the bid is not higher, send the
             // money back.
             require(
-                msg.value > highestBid,
+                msg.value > m_highestBid,
                 "There already is a higher bid."
             );
 
-            if (highestBid != 0) {
+            if (m_highestBid != 0) {
                 // Sending back the money by simply using
-                // highestBidder.send(highestBid) is a security risk
+                // highestBidder.send(m_highestBid) is a security risk
                 // because it could execute an untrusted contract.
                 // It is always safer to let the recipients
                 // withdraw their money themselves.
-                pendingReturns[highestBidder] += highestBid;
+                m_pendingReturns[m_highestBidder] += m_highestBid;
             }
-            highestBidder = msg.sender;
-            highestBid = msg.value;
+            m_highestBidder = msg.sender;
+            m_highestBid = msg.value;
             emit HighestBidIncreased(msg.sender, msg.value);
         }
 
         /// Withdraw a bid that was overbid.
         function withdraw() public returns (bool) {
-            uint amount = pendingReturns[msg.sender];
+            uint amount = m_pendingReturns[msg.sender];
             if (amount > 0) {
                 // It is important to set this to zero because the recipient
                 // can call this function again as part of the receiving call
                 // before `send` returns.
-                pendingReturns[msg.sender] = 0;
+                m_pendingReturns[msg.sender] = 0;
 
                 if (!msg.sender.send(amount)) {
                     // No need to call throw here, just reset the amount owing
-                    pendingReturns[msg.sender] = amount;
+                    m_pendingReturns[msg.sender] = amount;
                     return false;
                 }
             }
@@ -337,15 +337,15 @@ activate themselves.
             // external contracts.
 
             // 1. Conditions
-            require(now >= auctionEnd, "Auction not yet ended.");
-            require(!ended, "auctionEnd has already been called.");
+            require(now >= m_auctionEnd, "Auction not yet ended.");
+            require(!m_ended, "auctionEnd has already been called.");
 
             // 2. Effects
-            ended = true;
-            emit AuctionEnded(highestBidder, highestBid);
+            m_ended = true;
+            emit AuctionEnded(m_highestBidder, m_highestBid);
 
             // 3. Interaction
-            beneficiary.transfer(highestBid);
+            m_beneficiary.transfer(m_highestBid);
         }
     }
 
