@@ -107,11 +107,14 @@ void SMTChecker::endVisit(FunctionDefinition const& _function)
 	// TOOD we could check for "reachability", i.e. satisfiability here.
 	// We only handle local variables, so we clear at the beginning of the function.
 	// If we add storage variables, those should be cleared differently.
-	if (_function.returnParameterList())
-		m_functionReturn.push_back(currentValue(*(_function.returnParameters()[0])));
-	removeLocalVariables(*m_currentFunction.back());
+	if (_function.returnParameters().size())
+		if (hasVariable(*(_function.returnParameters()[0])))
+			m_functionReturn.push_back(currentValue(*(_function.returnParameters()[0])));
+	//removeLocalVariables(*m_currentFunction.back());
 	m_currentFunction.pop_back();
-	if (!isRootFunction())
+	if (isRootFunction())
+		removeLocalVariables();
+	else
 		m_functionArguments.pop_back();
 }
 
@@ -396,30 +399,24 @@ void SMTChecker::endVisit(FunctionCall const& _funCall)
 	{
 		Identifier const* _fun = dynamic_cast<Identifier const*>(&_funCall.expression());
 		FunctionDefinition const* _funDef = dynamic_cast<FunctionDefinition const*>(_fun->annotation().referencedDeclaration);
-		solAssert(_funDef, "");
 
-		auto callArgs = _funCall.arguments();
-		auto params = _funDef->parameters();
-		solAssert(callArgs.size() == params.size(), "");
-		vector<smt::Expression> funArgs;
-		for (auto arg: callArgs)
-			funArgs.push_back(expr(*arg));
-		m_functionArguments.push_back(funArgs);
-		_funDef->accept(*this);
-		if (_funDef->returnParameterList())
+		if (_funDef && _funDef->isImplemented())
 		{
-			defineExpr(_funCall, m_functionReturn.back());
-			m_functionReturn.pop_back();
+			auto callArgs = _funCall.arguments();
+			auto params = _funDef->parameters();
+			solAssert(callArgs.size() == params.size(), "");
+			vector<smt::Expression> funArgs;
+			for (auto arg: callArgs)
+				funArgs.push_back(expr(*arg));
+			m_functionArguments.push_back(funArgs);
+			_funDef->accept(*this);
+			if (_funDef->returnParameters().size())
+			{
+				defineExpr(_funCall, m_functionReturn.back());
+				m_functionReturn.pop_back();
+			}
 		}
 	}
-	/*
-	else
-		m_errorReporter.warning(
-			_funCall.location(),
-			"Assertion checker does not yet support this type of function call."
-		);
-	*/
-
 }
 
 void SMTChecker::endVisit(Identifier const& _identifier)
@@ -463,7 +460,8 @@ void SMTChecker::endVisit(Literal const& _literal)
 
 void SMTChecker::endVisit(Return const& _return)
 {
-	m_interface->addAssertion(expr(*_return.expression()) == newValue(*m_currentFunction.back()->returnParameters()[0]));
+	if (hasExpr(*_return.expression()))
+		m_interface->addAssertion(expr(*_return.expression()) == newValue(*m_currentFunction.back()->returnParameters()[0]));
 }
 
 void SMTChecker::arithmeticOperation(BinaryOperation const& _op)
@@ -792,6 +790,18 @@ void SMTChecker::initializeLocalVariables(FunctionDefinition const& _function)
 				setZeroValue(*retParam);
 }
 
+void SMTChecker::removeLocalVariables()
+{
+	for (auto it = m_variables.begin(); it != m_variables.end(); )
+	{
+		if (it->first->isLocalVariable())
+			it = m_variables.erase(it);
+		else
+			++it;
+	}
+}
+
+/*
 void SMTChecker::removeLocalVariables(FunctionDefinition const& _function)
 {
 	for (auto const& variable: _function.localVariables())
@@ -802,8 +812,10 @@ void SMTChecker::removeLocalVariables(FunctionDefinition const& _function)
 
 	if (_function.returnParameterList())
 		for (auto const& retParam: _function.returnParameters())
-			m_variables.erase(m_variables.find(&*retParam));
+			if (hasVariable(*retParam))
+				m_variables.erase(m_variables.find(&*retParam));
 }
+*/
 
 void SMTChecker::resetStateVariables()
 {
@@ -903,7 +915,7 @@ void SMTChecker::setUnknownValue(VariableDeclaration const& _decl)
 
 smt::Expression SMTChecker::expr(Expression const& _e)
 {
-	if (!m_expressions.count(&_e))
+	if (!hasExpr(_e))
 	{
 		m_errorReporter.warning(_e.location(), "Internal error: Expression undefined for SMT solver." );
 		createExpr(_e);
@@ -911,9 +923,19 @@ smt::Expression SMTChecker::expr(Expression const& _e)
 	return m_expressions.at(&_e);
 }
 
+bool SMTChecker::hasExpr(Expression const& _e) const
+{
+	return m_expressions.count(&_e);
+}
+
+bool SMTChecker::hasVariable(VariableDeclaration const& _var) const
+{
+	return m_variables.count(&_var);
+}
+
 void SMTChecker::createExpr(Expression const& _e)
 {
-	if (m_expressions.count(&_e))
+	if (hasExpr(_e))
 		m_errorReporter.warning(_e.location(), "Internal error: Expression created twice in SMT solver." );
 	else
 	{

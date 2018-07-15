@@ -21,7 +21,6 @@
 #include <libsolidity/formal/SolverInterface.h>
 
 #include <libsolidity/formal/SSAVariable.h>
-#include <libsolidity/formal/SymbolicFunction.h>
 
 #include <libsolidity/ast/ASTVisitor.h>
 
@@ -150,6 +149,8 @@ private:
 	smt::Expression expr(Expression const& _e);
 	/// Creates the expression (value can be arbitrary)
 	void createExpr(Expression const& _e);
+	/// Checks if expression was created
+	bool hasExpr(Expression const& _e) const;
 	/// Creates the expression and sets its value.
 	void defineExpr(Expression const& _e, smt::Expression _value);
 
@@ -165,7 +166,11 @@ private:
 	void addPathImpliedExpression(smt::Expression const& _e);
 
 	/// Removes the local variables of a function.
-	void removeLocalVariables(FunctionDefinition const& _function);
+	void removeLocalVariables();
+	//void removeLocalVariables(FunctionDefinition const& _function);
+
+	/// Checks if VariableDeclaration exists
+	bool hasVariable(VariableDeclaration const& _e) const;
 
 	std::shared_ptr<smt::SolverInterface> m_interface;
 	std::shared_ptr<VariableUsage> m_variableUsage;
