@@ -261,7 +261,7 @@ are reverted and even removed from the blockchain, but the longer you wait, the 
 likely it will be.
 
 .. note::
-    Transactions are not guaranteed to happen on the next block or any future specific block, since it is up to the miners to include transactions and not the submitter of the transaction. This applies to function calls and contract creation transactions.
+    Transactions are not guaranteed to happen on the next block or any future specific block, since it is up to the miners to include transactions and not the submitter of the transaction. This applies to function calls and contract creation transactions alike.
 
     If you want to schedule future calls of your contract, you can use the `alarm clock <http://www.ethereum-alarm-clock.com/>`_ service.
 
@@ -379,7 +379,7 @@ within a word). At the time of expansion, the cost in gas must be paid. Memory i
 costly the larger it grows (it scales quadratically).
 
 The EVM is not a register machine but a stack machine, so all
-computations are performed on an data rea called the **stack**. It has a maximum size of
+computations are performed on an data area called the **stack**. It has a maximum size of
 1024 elements and contains words of 256 bits. Access to the stack is
 limited to the top end in the following way:
 It is possible to copy one of
