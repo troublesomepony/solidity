@@ -646,7 +646,7 @@ Micropayment Channel
 ********************
 
 In this section we will learn how to build an example implementation
-of a payment channel. It use cryptographic signatures to make
+of a payment channel. It uses cryptographic signatures to make
 repeated transfers of Ether between the same parties secure, instantaneous, and
 without transaction fees. For the example, we need to understand how to
 sign and verify signatures, and setup the payment channel.
@@ -656,11 +656,11 @@ Creating and verifying signatures
 
 Imagine Alice wants to send a quantity of Ether to Bob, i.e.
 Alice is the sender and the Bob is the recipient.
-.. TODO: What does the below mean?
-Alice only needs to send cryptographically signed messages off-chain
-(e.g. via email) to Bob and it will be very similar to writing checks.
 
-Alice and Bob use signatures to authorise transactions, which are a feature of smart contracts.
+Alice only needs to send cryptographically signed messages off-chain
+(e.g. via email) to Bob and it is similar to writing checks.
+
+Alice and Bob use signatures to authorise transactions, which is possible with smart contracts on Ethereum.
 Alice will build a simple smart contract that lets her transmit Ether, but instead of calling a function herself
 to initiate a payment, she will let Bob do that, and therefore pay the transaction fee.
 
@@ -700,7 +700,7 @@ For a contract that fulfils payments, the signed message must include:
     2. The amount to be transferred.
     3. Protection against replay attacks.
 
-A replay attack is when a signed message is reused to claim authorisation for a second action. To avoid replay attacks we will use the same technique as in Ethereum transactions themselves, 'nonce', which is the number of transactions sent by an account. The smart contract will check if a nonce is used multiple times.
+A replay attack is when a signed message is reused to claim authorisation for a second action. To avoid replay attacks we will use the same technique as in Ethereum transactions themselves, called a 'nonce', which is the number of transactions sent by an account. The smart contract will check if a nonce is used multiple times.
 
 Another type of replay attack can occur when the owner deploys a ``ReceiverPays`` smart contract, makes some payments, and then destroys the contract. Later, they decide to deploy the ``RecipientPays`` smart contract again, but the new contract does not know the nonces used in the previous deployment, so the attacker can use the old messages again.
 
