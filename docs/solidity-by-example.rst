@@ -734,13 +734,12 @@ In general, ECDSA signatures consist of two parameters, ``r`` and ``s``. Signatu
 Extracting the Signature Parameters
 -----------------------------------
 
-Signatures produced by web3.js are the concatenation of ``r``, ``s`` and ``v``, so the first step is to split these parameters apart. You can do it on the client-side, but doing it inside the smart contract means only one signature parameter needs to be sent rather than three. Splitting apart a byte array into component parts is a little messy, we will use `inline assembly <assembly>`_ to do the job in the ``splitSignature`` function (the third function in the full contract at the end of this chapter).
+Signatures produced by web3.js are the concatenation of ``r``, ``s`` and ``v``, so the first step is to split these parameters apart. You can do this on the client-side, but doing it inside the smart contract means only one need to send one signature parameter needs rather than three. Splitting apart a byte array into component parts is a messy, so we use `inline assembly <assembly>`_ to do the job in the ``splitSignature`` function (the third function in the full contract at the end of this section).
 
 Computing the Message Hash
 --------------------------
 
 The smart contract needs to know exactly what parameters were signed, and so it must recreate the message from the parameters and use that for signature verification. The functions ``prefixed`` and ``recoverSigner`` do this in the ``claimPayment`` function.
-
 
 The full contract
 -----------------
@@ -814,12 +813,12 @@ The full contract
 Writing a Simple Payment Channel
 ================================
 
-Alice will now build a simple but complete implementation of a payment channel. Payment channels use cryptographic signatures to make repeated transfers of Ether securely, instantaneously, and without transaction fees.
+Alice now builds a simple but complete implementation of a payment channel. Payment channels use cryptographic signatures to make repeated transfers of Ether securely, instantaneously, and without transaction fees.
 
 What is a Payment Channel?
 --------------------------
 
-Payment channels allow participants to make repeated transfers of Ether without using transactions. This means that the delays and fees associated with transactions can be avoided. We are going to explore a simple unidirectional payment channel between two parties (Alice and Bob). It involves three steps:
+Payment channels allow participants to make repeated transfers of Ether without using transactions. This means that you can avoid the delays and fees associated with transactions. We are going to explore a simple unidirectional payment channel between two parties (Alice and Bob). It involves three steps:
 
     1. Alice funds a smart contract with Ether. This "opens" the payment channel.
     2. Alice signs messages that specify how much of that Ether is owed to the recipient. This step is repeated for each payment.
@@ -847,28 +846,27 @@ Each message includes the following information:
     * The smart contract's address, used to prevent cross-contract replay attacks.
     * The total amount of Ether that is owed the recipient so far.
 
-A payment channel is closed just once, at the of a series of transfers.
-Because of this, only one of the messages sent will be redeemed. This is why
+A payment channel is closed just once, at the end of a series of transfers.
+Because of this, only one of the messages sent is redeemed. This is why
 each message specifies a cumulative total amount of Ether owed, rather than the
 amount of the individual micropayment. The recipient will naturally choose to
 redeem the most recent message because that is the one with the highest total.
-The nonce per-message is not needed anymore, because the smart contract will
-only honor a single message. The address of the smart contract is still used
+The nonce per-message is not needed anymore, because the smart contract only honors a single message. The address of the smart contract is still used
 to prevent a message intended for one payment channel from being used for a different channel.
 
-Here is the modified javascript code to cryptographically sign a message from the previous chapter:
+Here is the modified JavaScript code to cryptographically sign a message from the previous section:
 
 ::
 
     function constructPaymentMessage(contractAddress, amount) {
-        return ethereumjs.ABI.soliditySHA3(
+        return abi.soliditySHA3(
             ["address", "uint256"],
             [contractAddress, amount]
         );
     }
 
     function signMessage(message, callback) {
-        web3.personal.sign(
+        web3.eth.personal.sign(
             "0x" + message.toString("hex"),
             web3.eth.defaultAccount,
             callback
@@ -889,18 +887,15 @@ Closing the Payment Channel
 
 When Bob is ready to receive their funds, it is time to
 close the payment channel by calling a ``close`` function on the smart contract.
-Closing the channel pays the recipient the Ether they are owed and destroys the contract,
-sending any remaining Ether back to Alice.
-To close the channel, Bob needs to provide a message signed by Alice.
+Closing the channel pays the recipient the Ether they are owed and destroys the contract, sending any remaining Ether back to Alice. To close the channel, Bob needs to provide a message signed by Alice.
 
 The smart contract must verify that the message contains a valid signature from the sender.
 The process for doing this verification is the same as the process the recipient uses.
 The Solidity functions ``isValidSignature`` and ``recoverSigner`` work just like their
-JavaScript counterparts in the previous section. The latter is borrowed from the
-``ReceiverPays`` contract in the previous chapter.
+JavaScript counterparts in the previous section, with the latter function borrowed from the ``ReceiverPays`` contract.
 
-The ``close`` function can only be called by the payment channel recipient,
-who will naturally pass the most recent payment message because that message
+Only the payment channel recipient can call the ``close`` function,
+who naturally passes the most recent payment message because that message
 carries the highest total owed. If the sender were allowed to call this function,
 they could provide a message with a lower amount and cheat the recipient out of what they are owed.
 
@@ -915,12 +910,10 @@ Channel Expiration
 Bob can close the payment channel at any time, but if they fail to do so,
 Alice needs a way to recover their escrowed funds. An *expiration* time was set
 at the time of contract deployment. Once that time is reached, Alice can call
-``claimTimeout`` to recover their funds. You can see the ``claimTimeout`` function in the
-full contract.
+``claimTimeout`` to recover their funds. You can see the ``claimTimeout`` function in the full contract.
 
 After this function is called, Bob can no longer receive any Ether,
 so it is important that Bob closes the channel before the expiration is reached.
-
 
 The full contract
 -----------------
@@ -1019,16 +1012,13 @@ The full contract
     }
 
 
-Note: The function ``splitSignature`` is very simple and does not use all security checks.
-A real implementation should use a more rigorously tested library, such as
-openzepplin's `version <https://github.com/OpenZeppelin/openzeppelin-solidity/blob/master/contracts/ECRecovery.sol>`_ of this code.
-
-
+.. note::
+  The function ``splitSignature`` is very simple and does not use all security checks. A real implementation should use a more rigorously tested library, such as openzepplin's `version <https://github.com/OpenZeppelin/openzeppelin-solidity/blob/master/contracts/ECRecovery.sol>`_ of this code.
 
 Verifying Payments
 ------------------
 
-Unlike in our previous chapter, messages in a payment channel aren't
+Unlike in the previous section, messages in a payment channel aren't
 redeemed right away. The recipient keeps track of the latest message and
 redeems it when it's time to close the payment channel. This means it's
 critical that the recipient perform their own verification of each message.
@@ -1043,25 +1033,23 @@ The recipient should verify each message using the following process:
     4. Verify that the signature is valid and comes from the payment channel sender.
 
 We'll use the `ethereumjs-util <https://github.com/ethereumjs/ethereumjs-util>`_
-library to write this verifications. The final step can be done a number of ways,
-but if it's being done in **JavaScript**.
-The following code borrows the `constructMessage` function from the signing **JavaScript code**
-above:
+library to write this verification. The final step can be done a number of ways,
+and we use JavaScript. The following code borrows the `constructMessage` function from the signing **JavaScript code** above:
 
 ::
 
     // this mimics the prefixing behavior of the eth_sign JSON-RPC method.
     function prefixed(hash) {
-        return ethereumjs.ABI.soliditySHA3(
+        return abi.soliditySHA3(
             ["string", "bytes32"],
             ["\x19Ethereum Signed Message:\n32", hash]
         );
     }
 
     function recoverSigner(message, signature) {
-        var split = ethereumjs.Util.fromRpcSig(signature);
-        var publicKey = ethereumjs.Util.ecrecover(message, split.v, split.r, split.s);
-        var signer = ethereumjs.Util.pubToAddress(publicKey).toString("hex");
+        var split = ethereumjsutil.fromRpcSig(signature);
+        var publicKey = ethereumjsutil.ecrecover(message, split.v, split.r, split.s);
+        var signer = ethereumjsutil.pubToAddress(publicKey).toString("hex");
         return signer;
     }
 
