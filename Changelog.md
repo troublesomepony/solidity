@@ -75,6 +75,7 @@ Bugfixes:
  * References Resolver: Enforce ``storage`` as data location for mappings.
  * Type Checker: Consider fixed size arrays when checking for recursive structs.
  * Type System: Allow arbitrary exponents for literals with a mantissa of zero.
+ * View Pure Checker: Warn about ``msg.value`` used by modifier in non-payable function. 
 
 ### 0.4.24 (2018-05-16)
 

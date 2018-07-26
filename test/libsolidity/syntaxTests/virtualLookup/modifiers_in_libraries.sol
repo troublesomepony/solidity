@@ -12,3 +12,4 @@ contract Test {
     }
 }
 // ----
+// Warning: (52-61): Modifier used in non-payable function, but this expression requires the function to be payable.

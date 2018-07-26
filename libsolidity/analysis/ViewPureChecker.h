@@ -30,6 +30,10 @@ namespace dev
 {
 namespace solidity
 {
+struct MutabilityLocation {
+	StateMutability mutability;
+	SourceLocation location;
+};
 
 class ASTNode;
 class FunctionDefinition;
@@ -59,21 +63,24 @@ private:
 	virtual bool visit(MemberAccess const& _memberAccess) override;
 	virtual void endVisit(MemberAccess const& _memberAccess) override;
 	virtual void endVisit(IndexAccess const& _indexAccess) override;
+	virtual bool visit(ModifierInvocation const& _modifier) override;
 	virtual void endVisit(ModifierInvocation const& _modifier) override;
 	virtual void endVisit(FunctionCall const& _functionCall) override;
 	virtual void endVisit(InlineAssembly const& _inlineAssembly) override;
 
 	/// Called when an element of mutability @a _mutability is encountered.
 	/// Creates appropriate warnings and errors and sets @a m_currentBestMutability.
-	void reportMutability(StateMutability _mutability, SourceLocation const& _location);
+	void reportMutability(StateMutability _mutability, SourceLocation const& _location, SourceLocation const& _nestedLocation = SourceLocation());
 
 	std::vector<std::shared_ptr<ASTNode>> const& m_ast;
 	ErrorReporter& m_errorReporter;
 
 	bool m_errors = false;
-	StateMutability m_currentBestMutability = StateMutability::Payable;
+	MutabilityLocation m_bestMutabilityLocation = MutabilityLocation{StateMutability::Payable, SourceLocation()};
 	FunctionDefinition const* m_currentFunction = nullptr;
-	std::map<ModifierDefinition const*, StateMutability> m_inferredMutability;
+	bool m_modifierDefinition = false;
+	bool m_modifierInvocation = false;
+	std::map<ModifierDefinition const*, MutabilityLocation> m_inferredMutability;
 };
 
 }

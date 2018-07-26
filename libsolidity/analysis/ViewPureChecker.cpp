@@ -142,7 +142,7 @@ bool ViewPureChecker::visit(FunctionDefinition const& _funDef)
 {
 	solAssert(!m_currentFunction, "");
 	m_currentFunction = &_funDef;
-	m_currentBestMutability = StateMutability::Pure;
+	m_bestMutabilityLocation.mutability = StateMutability::Pure;
 	return true;
 }
 
@@ -150,7 +150,7 @@ void ViewPureChecker::endVisit(FunctionDefinition const& _funDef)
 {
 	solAssert(m_currentFunction == &_funDef, "");
 	if (
-		m_currentBestMutability < _funDef.stateMutability() &&
+		m_bestMutabilityLocation.mutability < _funDef.stateMutability() &&
 		_funDef.stateMutability() != StateMutability::Payable &&
 		_funDef.isImplemented() &&
 		!_funDef.isConstructor() &&
@@ -159,7 +159,7 @@ void ViewPureChecker::endVisit(FunctionDefinition const& _funDef)
 	)
 		m_errorReporter.warning(
 			_funDef.location(),
-			"Function state mutability can be restricted to " + stateMutabilityToString(m_currentBestMutability)
+			"Function state mutability can be restricted to " + stateMutabilityToString(m_bestMutabilityLocation.mutability)
 		);
 	m_currentFunction = nullptr;
 }
@@ -167,14 +167,16 @@ void ViewPureChecker::endVisit(FunctionDefinition const& _funDef)
 bool ViewPureChecker::visit(ModifierDefinition const&)
 {
 	solAssert(m_currentFunction == nullptr, "");
-	m_currentBestMutability = StateMutability::Pure;
+	m_bestMutabilityLocation.mutability = StateMutability::Pure;
+	m_modifierDefinition = true;
 	return true;
 }
 
 void ViewPureChecker::endVisit(ModifierDefinition const& _modifierDef)
 {
 	solAssert(m_currentFunction == nullptr, "");
-	m_inferredMutability[&_modifierDef] = m_currentBestMutability;
+	m_inferredMutability[&_modifierDef] = m_bestMutabilityLocation;
+	m_modifierDefinition = false;
 }
 
 void ViewPureChecker::endVisit(Identifier const& _identifier)
@@ -219,7 +221,7 @@ void ViewPureChecker::endVisit(InlineAssembly const& _inlineAssembly)
 	}(_inlineAssembly.operations());
 }
 
-void ViewPureChecker::reportMutability(StateMutability _mutability, SourceLocation const& _location)
+void ViewPureChecker::reportMutability(StateMutability _mutability, SourceLocation const& _location, SourceLocation const& _nestedLocation)
 {
 	if (m_currentFunction && m_currentFunction->stateMutability() < _mutability)
 	{
@@ -237,6 +239,15 @@ void ViewPureChecker::reportMutability(StateMutability _mutability, SourceLocati
 				", but this expression (potentially) modifies the state and thus "
 				"requires non-payable (the default) or payable."
 			);
+		else if (_mutability == StateMutability::Payable)
+		{
+			if (m_modifierInvocation)
+				m_errorReporter.warning(
+					_nestedLocation,
+					"Modifier used in non-payable function, but this expression requires the function to be payable.",
+					SecondarySourceLocation().append("The modifier is used here:", _location)
+				);
+		}
 		else
 			solAssert(false, "");
 
@@ -247,8 +258,8 @@ void ViewPureChecker::reportMutability(StateMutability _mutability, SourceLocati
 		);
 		m_errors = true;
 	}
-	if (_mutability > m_currentBestMutability)
-		m_currentBestMutability = _mutability;
+	if (_mutability > m_bestMutabilityLocation.mutability)
+		m_bestMutabilityLocation = MutabilityLocation{_mutability, _nestedLocation};
 }
 
 void ViewPureChecker::endVisit(FunctionCall const& _functionCall)
@@ -297,8 +308,14 @@ void ViewPureChecker::endVisit(MemberAccess const& _memberAccess)
 		set<string> static const pureMembers{
 			"encode", "encodePacked", "encodeWithSelector", "encodeWithSignature", "data", "sig", "blockhash"
 		};
+		set<string> static const payableMembers{
+			"value"
+		};
 		if (!pureMembers.count(member))
 			mutability = StateMutability::View;
+		if (m_modifierDefinition)
+			if (payableMembers.count(member))
+				mutability = StateMutability::Payable;
 		break;
 	}
 	case Type::Category::Struct:
@@ -317,7 +334,7 @@ void ViewPureChecker::endVisit(MemberAccess const& _memberAccess)
 	default:
 		break;
 	}
-	reportMutability(mutability, _memberAccess.location());
+	reportMutability(mutability, _memberAccess.location(), _memberAccess.location());
 }
 
 void ViewPureChecker::endVisit(IndexAccess const& _indexAccess)
@@ -332,15 +349,22 @@ void ViewPureChecker::endVisit(IndexAccess const& _indexAccess)
 	}
 }
 
+bool ViewPureChecker::visit(ModifierInvocation const&)
+{
+	m_modifierInvocation = true;
+	return true;
+}
+
 void ViewPureChecker::endVisit(ModifierInvocation const& _modifier)
 {
 	solAssert(_modifier.name(), "");
 	if (ModifierDefinition const* mod = dynamic_cast<decltype(mod)>(_modifier.name()->annotation().referencedDeclaration))
 	{
 		solAssert(m_inferredMutability.count(mod), "");
-		reportMutability(m_inferredMutability.at(mod), _modifier.location());
+		reportMutability(m_inferredMutability.at(mod).mutability, _modifier.location(), m_inferredMutability.at(mod).location);
 	}
 	else
 		solAssert(dynamic_cast<ContractDefinition const*>(_modifier.name()->annotation().referencedDeclaration), "");
+	m_modifierInvocation = false;
 }
 
