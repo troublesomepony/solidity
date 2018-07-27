@@ -226,12 +226,16 @@ void ViewPureChecker::reportMutability(StateMutability _mutability, SourceLocati
 	if (m_currentFunction && m_currentFunction->stateMutability() < _mutability)
 	{
 		if (_mutability == StateMutability::View)
+		{
 			m_errorReporter.typeError(
 				_location,
 				"Function declared as pure, but this expression (potentially) reads from the "
 				"environment or state and thus requires \"view\"."
 			);
+			m_errors = true;
+		}
 		else if (_mutability == StateMutability::NonPayable)
+		{
 			m_errorReporter.typeError(
 				_location,
 				"Function declared as " +
@@ -239,6 +243,8 @@ void ViewPureChecker::reportMutability(StateMutability _mutability, SourceLocati
 				", but this expression (potentially) modifies the state and thus "
 				"requires non-payable (the default) or payable."
 			);
+			m_errors = true;
+		}
 		else if (_mutability == StateMutability::Payable)
 		{
 			if (m_modifierInvocation)
@@ -257,7 +263,6 @@ void ViewPureChecker::reportMutability(StateMutability _mutability, SourceLocati
 			m_currentFunction->stateMutability() == StateMutability::NonPayable,
 			""
 		);
-		m_errors = true;
 	}
 	if (_mutability > m_bestMutabilityLocation.mutability)
 		m_bestMutabilityLocation = MutabilityLocation{_mutability, _nestedLocation};
