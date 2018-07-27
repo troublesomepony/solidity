@@ -310,17 +310,27 @@ void ViewPureChecker::endVisit(MemberAccess const& _memberAccess)
 		break;
 	case Type::Category::Magic:
 	{
-		// we can ignore the kind of magic and only look at the name of the member
-		set<string> static const pureMembers{
-			"encode", "encodePacked", "encodeWithSelector", "encodeWithSignature", "data", "sig", "blockhash"
+		using MagicMember = pair<MagicType::Kind, string>;
+		set<MagicMember> static const pureMembers{
+			{MagicType::Kind::ABI, "encode"},
+			{MagicType::Kind::ABI, "encodePacked"},
+			{MagicType::Kind::ABI, "encodeWithSelector"},
+			{MagicType::Kind::ABI, "encodeWithSignature"},
+			{MagicType::Kind::Block, "blockhash"},
+			{MagicType::Kind::Message, "data"},
+			{MagicType::Kind::Message, "sig"}
 		};
-		set<string> static const payableMembers{
-			"value"
+		set<MagicMember> static const payableMembers{
+			{MagicType::Kind::Message, "value"}
 		};
-		if (!pureMembers.count(member))
+
+		auto const& type = dynamic_cast<MagicType const&>(*_memberAccess.expression().annotation().type);
+		MagicMember magicMember(type.kind(), member);
+
+		if (!pureMembers.count(magicMember))
 			mutability = StateMutability::View;
-		if (m_modifierDefinition)
-			if (payableMembers.count(member))
+		if (payableMembers.count(magicMember))
+			if (m_modifierDefinition)
 				mutability = StateMutability::Payable;
 		break;
 	}
