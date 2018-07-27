@@ -253,7 +253,8 @@ void ViewPureChecker::reportMutability(StateMutability _mutability, SourceLocati
 
 		solAssert(
 			m_currentFunction->stateMutability() == StateMutability::View ||
-			m_currentFunction->stateMutability() == StateMutability::Pure,
+			m_currentFunction->stateMutability() == StateMutability::Pure ||
+			m_currentFunction->stateMutability() == StateMutability::NonPayable,
 			""
 		);
 		m_errors = true;
