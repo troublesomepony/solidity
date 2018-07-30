@@ -352,6 +352,24 @@ check the value ranges at runtime and a failure causes an exception.  Enums need
         }
     }
 
+.. index:: ! contract type, ! type; contract
+
+.. _contract_types:
+
+Contracts
+---------
+
+Contracts themselves are a type that you can define and call from another
+contract, for example ::
+
+  D d = new D(4);
+
+You can find more details in the :ref:`'Contracts via new'<creating-contracts>`
+section.
+
+Contract types are implicitly convertible to ``address`` types and explicitly
+convertible to and from all ``integer`` types. 
+
 .. index:: ! function type, ! type; function
 
 .. _function_types:
