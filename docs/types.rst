@@ -359,15 +359,15 @@ check the value ranges at runtime and a failure causes an exception.  Enums need
 Contracts
 ---------
 
-Contracts themselves are a type that you can define and call from another
-contract, for example (where ``Token()`` is a contract) ::
+Contracts themselves are their own individual type, as defined by their contract, that you can
+call from another contract. For example (where ``Token`` is a contract) ::
 
   Token token = new Token();
-  
+
 You can find more details in the :ref:`'Contracts via new'<creating-contracts>`
 section.
 
-Contract types are implicitly convertible to ``address`` types and explicitly
+Contract types are implicitly convertible to ``address`` type and explicitly
 convertible to and from all ``integer`` types.
 
 .. index:: ! function type, ! type; function
