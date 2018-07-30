@@ -360,15 +360,15 @@ Contracts
 ---------
 
 Contracts themselves are a type that you can define and call from another
-contract, for example ::
+contract, for example (where ``Token()`` is a contract) ::
 
-  D d = new D(4);
-
+  Token token = new Token();
+  
 You can find more details in the :ref:`'Contracts via new'<creating-contracts>`
 section.
 
 Contract types are implicitly convertible to ``address`` types and explicitly
-convertible to and from all ``integer`` types. 
+convertible to and from all ``integer`` types.
 
 .. index:: ! function type, ! type; function
 
