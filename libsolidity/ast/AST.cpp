@@ -360,7 +360,7 @@ string FunctionDefinition::fullyQualifiedName() const
 	else
 		fname = name();
 
-	return sourceUnitName() + ":" + contract->name() + "." + fname;
+	return contract->fullyQualifiedName() + "." + fname;
 }
 
 FunctionDefinitionAnnotation& FunctionDefinition::annotation() const
